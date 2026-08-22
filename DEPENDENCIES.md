@@ -9,6 +9,7 @@ update both places together.
 | Qt         | 6.11.0  | preinstalled (`E:/Qt/6.11.0/mingw_64` on Windows) | `find_package(Qt6)`; prefix overridable via `-DCMAKE_PREFIX_PATH` |
 | Z3         | 5.1.0   | https://github.com/Z3Prover/z3, tag `z3-5.1.0`, commit `0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8` | project-local build into `ThirdParty/Z3/install`; consumed as `z3::libz3` |
 | doctest    | 2.4.12  | https://github.com/doctest/doctest, tag `v2.4.12` | FetchContent at configure time |
+| nlohmann/json | 3.11.3 | https://github.com/nlohmann/json, tag `v3.11.3` | FetchContent; `.z3w` project format (core is Qt-free) |
 | Ninja      | 1.12.1  | `E:/Qt/Tools/Ninja` | build generator |
 | CMake      | >= 3.24 | system / `E:/Qt/Tools/CMake_64` | build system |
 

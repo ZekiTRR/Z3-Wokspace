@@ -4,6 +4,7 @@
 #include <QQuickStyle>
 
 #include "core/solver/SolverFactory.hpp"
+#include "gui/highlighting/EditorTools.hpp"
 #include "gui/viewmodels/WorkspaceViewModel.hpp"
 
 int main(int argc, char* argv[])
@@ -22,6 +23,9 @@ int main(int argc, char* argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("workspace"), &oWorkspace);
+
+    z3wb::gui::EditorTools oEditorTools;
+    engine.rootContext()->setContextProperty(QStringLiteral("editorTools"), &oEditorTools);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed,

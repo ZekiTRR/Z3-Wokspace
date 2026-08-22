@@ -1,0 +1,92 @@
+name: CI
+
+# Current compiler matrix: GCC + Clang only. MSVC is a documented future
+# extension point (see DEPENDENCIES.md) and must NOT be added here until the
+# toolchain support work lands.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux-gcc:
+    name: Linux / GCC
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build qt6-base-dev qt6-declarative-dev libz3-dev
+
+      - name: Configure
+        run: cmake -S . -B build/gcc -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/gcc
+
+      - name: Test
+        run: ctest --test-dir build/gcc --output-on-failure
+
+  linux-clang:
+    name: Linux / Clang
+    runs-on: ubuntu-latest
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang qt6-base-dev qt6-declarative-dev libz3-dev
+
+      - name: Configure
+        run: cmake -S . -B build/clang -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/clang
+
+      - name: Test
+        run: ctest --test-dir build/clang --output-on-failure
+
+  windows-mingw:
+    name: Windows / MinGW GCC
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2 (MinGW64: gcc, ninja, Qt6, Z3)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          cache: true
+          install: >-
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-qt6-declarative
+            mingw-w64-x86_64-z3
+
+      - name: Configure
+        run: cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/mingw
+
+      - name: Test
+        run: ctest --test-dir build/mingw --output-on-failure
+
+  # [Future] MSVC job goes here once toolchain support lands.
+  # It must reuse the same configure/build/test steps, not fork the pipeline.

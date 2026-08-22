@@ -3,6 +3,10 @@
 #include "core/domain/Problem.hpp"
 #include "core/domain/Project.hpp"
 #include "core/domain/SolverResult.hpp"
+#include "core/parser/DslPrinter.hpp"
+#include "core/serialization/JsonProjectStorage.hpp"
+#include "core/serialization/ProblemExporter.hpp"
+#include "core/serialization/SmtLib2Reader.hpp"
 #include "core/solver/AtomicCancellation.hpp"
 #include "core/solver/ISolver.hpp"
 #include "core/solver/SolverConfig.hpp"
@@ -15,7 +19,9 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
+#include <QUrl>
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 
@@ -39,6 +45,7 @@ class WorkspaceViewModel : public QObject
     Q_PROPERTY(QString resultStatus READ resultStatus NOTIFY resultChanged)
     Q_PROPERTY(qint64 solveTimeMs READ solveTimeMs NOTIFY resultChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+    Q_PROPERTY(bool hasUnsavedChanges READ hasUnsavedChanges NOTIFY dirtyChanged)
 
 public:
     explicit WorkspaceViewModel(std::shared_ptr<ISolver> spSolver,
@@ -59,6 +66,7 @@ public:
     [[nodiscard]] QString resultStatus() const;
     [[nodiscard]] qint64 solveTimeMs() const;
     [[nodiscard]] bool busy() const;
+    [[nodiscard]] bool hasUnsavedChanges() const;
 
     // --- QML invokables ------------------------------------------------------
     Q_INVOKABLE void createProblem();
@@ -70,12 +78,31 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE QString smtLib2Text();
 
+    // Persistence. save() uses the remembered path or asks the UI for one
+    // (requestSaveDialog) when the project was never saved.
+    Q_INVOKABLE void openProject(const QUrl& oFile);
+    Q_INVOKABLE void saveProject();
+    Q_INVOKABLE void saveProjectAs(const QUrl& oFile);
+
+    // strFormat is "smt2" | "json" | "txt" (matched in exportProblem).
+    Q_INVOKABLE void exportProblem(const QUrl& oFile, const QString& strFormat);
+    Q_INVOKABLE void importSmtLib2(const QUrl& oFile);
+
+    // Recents + window layout (QSettings-backed, org/app from main()).
+    Q_INVOKABLE QStringList recentProjects() const;
+    Q_INVOKABLE void openProjectPath(const QString& strPath);
+    Q_INVOKABLE void removeRecentProject(const QString& strPath);
+    Q_INVOKABLE QVariantMap restoreWindowGeometry() const;
+    Q_INVOKABLE void saveWindowGeometry(int iX, int iY, int iWidth, int iHeight);
+
 signals:
     void currentProblemChanged();
     void editorTextChanged();
     void resultChanged();
     void busyChanged();
+    void dirtyChanged();
     void solveRequested(z3wb::gui::SolveJob oJob);
+    void requestSaveDialog();
 
 private slots:
     void onSolveFinished(z3wb::gui::SolveJobResult oResult);
@@ -96,6 +123,15 @@ private:
     void refreshDiagnosticsModel(const std::vector<Diagnostic>& vecDiags);
     void applyResult(const SolverResult& oResult);
     void setBusy(bool bBusy);
+    void markDirty();
+    void resetSelectionToFirst();
+    [[nodiscard]] static std::filesystem::path toNativePath(const QString& strPath);
+
+    // Persistence internals; callers must ensure the worker is idle.
+    void loadFromPath(const QString& strPath);
+    void saveToPath(const QString& strPath);
+    void rememberRecentProject(const QString& strPath);
+    [[nodiscard]] static QStringList loadRecentProjects();
     void logInfo(const QString& strText);
     void logWarning(const QString& strText);
     void logError(const QString& strText);
@@ -126,6 +162,12 @@ private:
     SolverConfig m_oSolverConfig;
     QString m_strResultStatus;            // "" | SAT | UNSAT | UNKNOWN | ERROR | INVALID
     qint64 m_iSolveTimeMs = 0;
+
+    QString m_strProjectPath;             // empty until first save
+    bool m_bDirty = false;
+    JsonProjectStorage m_oStorage;
+    ProblemExporter m_oExporter;
+    SmtLib2Reader m_oReader;
 };
 
 } // namespace z3wb::gui

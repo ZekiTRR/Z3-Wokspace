@@ -55,6 +55,10 @@ Rectangle {
 
                 background: Rectangle { color: Theme.editor }
 
+                Component.onCompleted: function() {
+                    editorTools.attachHighlighter(txtEditor.textDocument);
+                }
+
                 // Guarded two-way binding: programmatic updates (problem
                 // switch) flow in, user typing flows out, no feedback loop.
                 onTextChanged: function() {

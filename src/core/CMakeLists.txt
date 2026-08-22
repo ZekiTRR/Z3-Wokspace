@@ -14,8 +14,13 @@ set(Z3WB_CORE_SOURCES
     domain/Variable.cpp
     parser/Lexer.cpp
     parser/Parser.cpp
+    parser/DslPrinter.cpp
     parser/ProblemParser.cpp
     parser/SemanticAnalyzer.cpp
+    serialization/JsonProjectStorage.cpp
+    serialization/ProblemExporter.cpp
+    serialization/SmtLib2Reader.cpp
+    serialization/SmtLib2Serializer.cpp
     solver/SolverFactory.cpp
     solver/z3/Z3ExpressionConverter.cpp
     solver/z3/Z3ModelConverter.cpp
@@ -36,4 +41,5 @@ target_include_directories(Z3WorkbenchCore PUBLIC
 
 target_link_libraries(Z3WorkbenchCore PRIVATE
     z3::libz3
+    nlohmann_json::nlohmann_json
 )

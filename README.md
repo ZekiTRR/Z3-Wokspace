@@ -8,19 +8,25 @@ for reverse engineering, CTF, and symbolic reasoning workflows.
 ```text
 var x: BitVec(32)
 constraint ((x ^ 0x1337) + 10) == 0x4242
-→ Solve → SAT, x = 0x4238 ^ 0x1337
+→ Solve → SAT, x = 0x510F
 ```
 
 ## Status
 
-Phase 1 (architecture skeleton) — the project builds and runs:
+MVP complete (phases 1–9):
 
-- CMake project with per-toolchain build trees
-- Qt-free core library (`Z3WorkbenchCore`) linked against a project-local Z3
-- Qt 6 / QML application with a dark IDE-style shell window
-- Unit + solver smoke tests (SAT / UNSAT / UNKNOWN / BitVec / model eval)
+- IDE layout, dark theme, DSL editor with live diagnostics + highlighting
+- Int / Bool / Real / String / BitVec(8..64), unsigned BV semantics
+- Async solving with timeout + Stop (never blocks the UI)
+- SAT/UNSAT/UNKNOWN with models, statistics, console log
+- `.z3w` project files (JSON, versioned schema), recent projects
+- Export: SMT-LIB2 (portable, Z3-free serializer), JSON, TXT; Import: SMT-LIB2
 
-See `ARCHITECTURE.md` for the design and `BUILD.md` for build instructions.
+See **[Documentation.md](Documentation.md)** (English) or
+**[Documentation.ru.md](Documentation.ru.md)** (Russian) for the complete
+user manual: full DSL syntax reference, worked examples, diagnostics catalog,
+and file formats. See `ARCHITECTURE.md` for the internal design and
+`BUILD.md` for build instructions.
 
 ## Quick start (Windows, MinGW)
 
@@ -37,8 +43,8 @@ Linux: use `scripts/bootstrap_z3.sh` and plain CMake — see `BUILD.md`.
 ## Supported toolchains
 
 ```text
-GCC / G++    (Windows: MinGW-w64 13.1.0 shipped with Qt; Linux: system GCC)
-Clang        (supported by design; CI matrix in a later phase)
+GCC / G++    (Windows: MinGW-w64; Linux: system GCC)   — CI: ✓
+Clang        (Linux; CI job enabled)                   — CI: ✓
 MSVC         not supported yet — future compatibility target only
 ```
 

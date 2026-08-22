@@ -5,6 +5,8 @@
 # repository-level qml/ directory and belong to the executable's QML module.
 # -----------------------------------------------------------------------------
 set(Z3WB_GUI_SOURCES
+    highlighting/DslHighlighter.cpp
+    highlighting/EditorTools.cpp
     models/ConsoleLogModel.cpp
     models/DiagnosticsModel.cpp
     models/ProblemsModel.cpp
@@ -14,6 +16,8 @@ set(Z3WB_GUI_SOURCES
 )
 
 set(Z3WB_GUI_HEADERS
+    highlighting/DslHighlighter.hpp
+    highlighting/EditorTools.hpp
     models/ConsoleLogModel.hpp
     models/DiagnosticsModel.hpp
     models/ProblemsModel.hpp

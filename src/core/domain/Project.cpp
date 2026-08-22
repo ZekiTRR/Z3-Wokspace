@@ -87,6 +87,17 @@ const Problem* Project::problemAt(std::size_t stIndex) const
     return stIndex < m_vecProblems.size() ? &m_vecProblems[stIndex] : nullptr;
 }
 
+Problem* Project::adoptProblem(Problem oProblem)
+{
+    if (findProblem(oProblem.name()) != nullptr)
+    {
+        return nullptr;
+    }
+
+    m_vecProblems.push_back(std::move(oProblem));
+    return &m_vecProblems.back();
+}
+
 Problem* Project::duplicateProblem(ProblemId oId, std::string strNewName)
 {
     const Problem* pSource = findProblem(oId);

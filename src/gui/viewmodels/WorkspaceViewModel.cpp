@@ -3,12 +3,17 @@
 #include "core/parser/ProblemParser.hpp"
 
 #include <QDateTime>
-
+#include <QFileInfo>
+#include <QSettings>
+#include <fstream>
+#include <sstream>
 #include <utility>
 
 namespace z3wb::gui {
 
 namespace {
+
+constexpr int k_iMaxRecentProjects = 10;
 
 } // namespace
 
@@ -85,6 +90,7 @@ void WorkspaceViewModel::setEditorText(const QString& strText)
 
     pProblem->setSourceText(strText.toStdString());
     reparseEditor();
+    markDirty();
     emit editorTextChanged();
 }
 
@@ -131,6 +137,312 @@ void WorkspaceViewModel::setBusy(bool bBusy)
     }
     m_bBusy = bBusy;
     emit busyChanged();
+}
+
+bool WorkspaceViewModel::hasUnsavedChanges() const
+{
+    return m_bDirty;
+}
+
+void WorkspaceViewModel::markDirty()
+{
+    if (!m_bDirty)
+    {
+        m_bDirty = true;
+        emit dirtyChanged();
+    }
+}
+
+std::filesystem::path WorkspaceViewModel::toNativePath(const QString& strPath)
+{
+#ifdef _WIN32
+    return std::filesystem::path(strPath.toStdWString());
+#else
+    return std::filesystem::path(strPath.toStdString());
+#endif
+}
+
+void WorkspaceViewModel::rememberRecentProject(const QString& strPath)
+{
+    if (strPath.isEmpty())
+    {
+        return;
+    }
+
+    QSettings oSettings;
+    QStringList vecRecents = loadRecentProjects();
+    vecRecents.removeAll(strPath);
+    vecRecents.prepend(strPath);
+    while (vecRecents.size() > k_iMaxRecentProjects)
+    {
+        vecRecents.removeLast();
+    }
+    oSettings.setValue(QStringLiteral("recentProjects"), vecRecents);
+}
+
+QStringList WorkspaceViewModel::loadRecentProjects()
+{
+    QSettings oSettings;
+    return oSettings.value(QStringLiteral("recentProjects")).toStringList();
+}
+
+QStringList WorkspaceViewModel::recentProjects() const
+{
+    return loadRecentProjects();
+}
+
+void WorkspaceViewModel::openProjectPath(const QString& strPath)
+{
+    loadFromPath(strPath);
+}
+
+void WorkspaceViewModel::removeRecentProject(const QString& strPath)
+{
+    QSettings oSettings;
+    QStringList vecRecents = loadRecentProjects();
+    vecRecents.removeAll(strPath);
+    oSettings.setValue(QStringLiteral("recentProjects"), vecRecents);
+}
+
+QVariantMap WorkspaceViewModel::restoreWindowGeometry() const
+{
+    QSettings oSettings;
+    QVariantMap oGeometry;
+    oGeometry[QStringLiteral("x")] =
+        oSettings.value(QStringLiteral("window/x"), -1).toInt();
+    oGeometry[QStringLiteral("y")] =
+        oSettings.value(QStringLiteral("window/y"), -1).toInt();
+    oGeometry[QStringLiteral("width")] =
+        oSettings.value(QStringLiteral("window/width"), 1280).toInt();
+    oGeometry[QStringLiteral("height")] =
+        oSettings.value(QStringLiteral("window/height"), 800).toInt();
+    return oGeometry;
+}
+
+void WorkspaceViewModel::saveWindowGeometry(int iX, int iY, int iWidth, int iHeight)
+{
+    QSettings oSettings;
+    oSettings.setValue(QStringLiteral("window/x"), iX);
+    oSettings.setValue(QStringLiteral("window/y"), iY);
+    oSettings.setValue(QStringLiteral("window/width"), iWidth);
+    oSettings.setValue(QStringLiteral("window/height"), iHeight);
+}
+
+void WorkspaceViewModel::loadFromPath(const QString& strPath)
+{
+    if (m_bBusy)
+    {
+        logWarning(QStringLiteral("Cannot open a project while solving"));
+        return;
+    }
+
+    const StorageOutcome oOutcome = m_oStorage.load(toNativePath(strPath));
+    if (oOutcome.oError.has_value())
+    {
+        logError(QStringLiteral("Open failed: %1")
+            .arg(QString::fromStdString(oOutcome.oError->message)));
+        return;
+    }
+
+    m_oProject = std::move(*oOutcome.oProject);
+    m_strProjectPath = strPath;
+    m_bDirty = false;
+    emit dirtyChanged();
+
+    rememberRecentProject(strPath);
+
+    logInfo(QStringLiteral("Opened %1 (%2 problems)")
+        .arg(strPath).arg(m_oProject.problems().size()));
+}
+
+void WorkspaceViewModel::saveToPath(const QString& strPath)
+{
+    if (m_bBusy)
+    {
+        logWarning(QStringLiteral("Cannot save while solving"));
+        return;
+    }
+
+    const StorageOutcome oOutcome = m_oStorage.save(m_oProject, toNativePath(strPath));
+    if (oOutcome.oError.has_value())
+    {
+        logError(QStringLiteral("Save failed: %1")
+            .arg(QString::fromStdString(oOutcome.oError->message)));
+        return;
+    }
+
+    m_strProjectPath = strPath;
+    m_bDirty = false;
+    emit dirtyChanged();
+    rememberRecentProject(strPath);
+    logInfo(QStringLiteral("Project saved to %1").arg(strPath));
+}
+
+void WorkspaceViewModel::openProject(const QUrl& oFile)
+{
+    const QString strPath = oFile.toLocalFile();
+    if (strPath.isEmpty())
+    {
+        return;
+    }
+
+    loadFromPath(strPath);
+}
+
+void WorkspaceViewModel::saveProject()
+{
+    if (m_strProjectPath.isEmpty())
+    {
+        // The UI shows the save dialog and calls back via saveProjectAs().
+        emit requestSaveDialog();
+        return;
+    }
+
+    saveToPath(m_strProjectPath);
+}
+
+void WorkspaceViewModel::saveProjectAs(const QUrl& oFile)
+{
+    QString strPath = oFile.toLocalFile();
+    if (strPath.isEmpty())
+    {
+        return;
+    }
+
+    // Normalize the extension so files stay openable by double-click.
+    if (!strPath.endsWith(QStringLiteral(".z3w"), Qt::CaseInsensitive))
+    {
+        strPath += QStringLiteral(".z3w");
+    }
+
+    saveToPath(strPath);
+}
+
+void WorkspaceViewModel::resetSelectionToFirst()
+{
+    if (!m_oProject.problems().empty())
+    {
+        selectById(m_oProject.problems().front().id());
+        return;
+    }
+
+    // Empty project: clear the editor state completely.
+    m_oCurrentId = ProblemId{};
+    m_oEditor = EditorState{};
+    emit currentProblemChanged();
+    emit editorTextChanged();
+    refreshDiagnosticsModel({});
+    refreshVariablesModel(std::nullopt);
+    m_strResultStatus.clear();
+    m_iSolveTimeMs = 0;
+    emit resultChanged();
+}
+
+void WorkspaceViewModel::exportProblem(const QUrl& oFile, const QString& strFormat)
+{
+    Problem* pProblem = currentProblem();
+    if (pProblem == nullptr)
+    {
+        logWarning(QStringLiteral("Nothing to export — no problem selected"));
+        return;
+    }
+    if (m_bBusy)
+    {
+        logWarning(QStringLiteral("Cannot export while solving"));
+        return;
+    }
+
+    ProblemExportFormat eFormat = ProblemExportFormat::Txt;
+    if (strFormat == QLatin1String("smt2"))
+    {
+        eFormat = ProblemExportFormat::SmtLib2;
+    }
+    else if (strFormat == QLatin1String("json"))
+    {
+        eFormat = ProblemExportFormat::Json;
+    }
+
+    // Export always reflects what the user sees right now; if the current
+    // text has not parsed yet, fall back to the last valid contents.
+    reparseEditor();
+    Problem* pSource = m_oEditor.bValid ? &m_oEditor.oProblem : pProblem;
+
+    const std::optional<StorageError> oError =
+        m_oExporter.write(*pSource, eFormat, toNativePath(oFile.toLocalFile()));
+    if (oError.has_value())
+    {
+        logError(QStringLiteral("Export failed: %1")
+            .arg(QString::fromStdString(oError->message)));
+        return;
+    }
+
+    logInfo(QStringLiteral("Exported %1 as %2")
+        .arg(QString::fromStdString(pSource->name()), strFormat));
+}
+
+void WorkspaceViewModel::importSmtLib2(const QUrl& oFile)
+{
+    const QString strPath = oFile.toLocalFile();
+    if (strPath.isEmpty() || m_bBusy)
+    {
+        return;
+    }
+
+    std::ifstream oStream(toNativePath(strPath), std::ios::binary);
+    if (!oStream)
+    {
+        logError(QStringLiteral("Cannot open SMT-LIB2 file for reading"));
+        return;
+    }
+    std::ostringstream oBuffer;
+    oBuffer << oStream.rdbuf();
+
+    // Derive a unique problem name from the file name.
+    const QFileInfo oInfo(strPath);
+    std::string strName = oInfo.completeBaseName().toStdString();
+
+    std::vector<std::string> vecNames;
+    vecNames.reserve(m_oProject.problems().size());
+    for (const Problem& oExisting : m_oProject.problems())
+    {
+        vecNames.push_back(oExisting.name());
+    }
+    strName = Problem::makeUniqueName(strName, vecNames);
+
+    StorageError oError;
+    std::optional<Problem> oImported = m_oReader.read(oBuffer.str(), strName, &oError);
+    if (!oImported.has_value())
+    {
+        logError(QStringLiteral("Import failed: %1")
+            .arg(QString::fromStdString(oError.message)));
+        return;
+    }
+
+    // Turn the imported expressions into editable DSL source and rebuild so
+    // the problem becomes identical to a hand-typed one.
+    const std::string strSource = DslPrinter::printProblem(*oImported);
+    std::vector<Diagnostic> vecDiags;
+    if (!rebuildProblemFromSource(*oImported, strSource, vecDiags))
+    {
+        logError(QStringLiteral("Imported problem does not validate"));
+        return;
+    }
+
+    Problem* pAdopted = m_oProject.adoptProblem(std::move(*oImported));
+    if (pAdopted == nullptr)
+    {
+        logWarning(QStringLiteral("Import failed: duplicate problem name"));
+        return;
+    }
+    pAdopted->setSourceText(strSource);
+
+    refreshProblemsModel();
+    markDirty();
+    selectById(pAdopted->id());
+
+    logInfo(QStringLiteral("Imported %1 (%2 constraints)")
+        .arg(QString::fromStdString(strName))
+        .arg(pAdopted->constraintCount()));
 }
 
 Problem* WorkspaceViewModel::currentProblem()
@@ -336,6 +648,7 @@ void WorkspaceViewModel::createProblem()
     setEditorText(QString::fromUtf8(k_szStarter));
 
     logInfo(QStringLiteral("Created %1").arg(QString::fromStdString(strName)));
+    markDirty();
 }
 
 void WorkspaceViewModel::selectProblem(int iRow)
@@ -381,6 +694,7 @@ void WorkspaceViewModel::removeProblem(int iRow)
 
     refreshProblemsModel();
     logInfo(QStringLiteral("Deleted %1").arg(strName));
+    markDirty();
 
     if (m_oCurrentId == oRemovedId)
     {
@@ -419,6 +733,7 @@ void WorkspaceViewModel::renameProblem(int iRow, const QString& strNewName)
 
     pProblem->setName(strName);
     refreshProblemsModel();
+    markDirty();
     if (bIsCurrent)
     {
         emit currentProblemChanged();
@@ -452,6 +767,7 @@ void WorkspaceViewModel::duplicateProblem(int iRow)
     refreshProblemsModel();
     logInfo(QStringLiteral("Duplicated %1 -> %2")
         .arg(QString::fromStdString(oSource.name()), QString::fromStdString(strCopyName)));
+    markDirty();
 }
 
 void WorkspaceViewModel::solve()

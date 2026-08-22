@@ -11,6 +11,7 @@ add_executable(Z3WorkbenchTests
     parser/LexerTest.cpp
     parser/ParserTest.cpp
     parser/SemanticTest.cpp
+    serialization/SerializationTest.cpp
     solver/Z3SmokeTest.cpp
 )
 

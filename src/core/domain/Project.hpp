@@ -38,6 +38,10 @@ public:
     // constraints, including references inside expressions.
     [[nodiscard]] Problem* duplicateProblem(ProblemId oId, std::string strNewName);
 
+    // Moves an externally built problem into the project (used by the
+    // project loader). Returns nullptr when the name is already taken.
+    [[nodiscard]] Problem* adoptProblem(Problem oProblem);
+
     [[nodiscard]] const std::vector<Problem>& problems() const noexcept { return m_vecProblems; }
 
 private:

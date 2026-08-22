@@ -121,12 +121,52 @@ Result: SolveJobResult via queued signal → GUI thread → panels updated
 - Results for a problem that is no longer selected are discarded with a log
   note. Stop while busy sets status CANCELLING until the backend returns.
 
-## Persistence and export (Phases 7-8)
+## Persistence (Phase 7, done)
 
-`.z3w` project files are JSON with a schema `version` field (migration
-layer). Serialization lives in core (Qt-free) using nlohmann/json (pinned).
-Export targets: SMT-LIB2, JSON, TXT; SMT-LIB2 is produced by a dedicated
-serializer from the Domain representation and is also viewable in the UI.
+`.z3w` project files are JSON with a `version` field:
+
+```json
+{
+    "version": 1,
+    "name": "Example",
+    "problems": [
+        { "name": "crackme_01", "source": "var x: BitVec(32)\nconstraint ..." }
+    ]
+}
+```
+
+- `JsonProjectStorage` lives in core (`serialization/`, Qt-free) and returns
+  typed outcomes (`StorageOutcome` + `StorageError{Io, Format, Version}`);
+  no exceptions cross the boundary.
+- **The DSL source is the single source of truth**: loading rebuilds each
+  problem through the real parser, so the format cannot drift from the
+  language. A stored source that no longer parses is reported as a format
+  error naming the problem.
+- Migration chain hook: `migrateDocument()` upgrades documents stepwise;
+  files written by newer schema versions are rejected with a clear message.
+- GUI wiring: Ctrl+O / Ctrl+S / Ctrl+Shift+S, native file dialogs, dirty
+  tracking (`*` in title/toolbar), busy-guarded operations.
+  `Project::adoptProblem` moves loaded problems into the project.
+
+## Export / Import (Phase 8, done)
+
+```text
+Domain Problem → SmtLib2Serializer → .smt2   (Z3-free, portable output)
+.smt2 → SmtLib2Reader → expressions → DslPrinter → DSL source → normal pipeline
+Domain Problem → ProblemExporter {SmtLib2 | Json | Txt} → files
+```
+
+- The serializer infers sorts from the declared variables, so BitVec
+  operations map to unsigned functions (bvult, bvudiv, bvneg, ...) and
+  negation picks the right form per sort.
+- The reader accepts the exporter's subset (declare-const/assert over the
+  workbench operator set); unknown commands are skipped, unknown operators
+  are reported with line numbers.
+- Imported problems become first-class: DslPrinter generates editable DSL
+  source, then everything (validation, persistence, solving) works as usual.
+- GUI: File ▸ Export Problem ▸ SMT-LIB2/JSON/TXT, File ▸ Import SMT-LIB2,
+  toolbar "Export SMT2"; the Ctrl+M viewer keeps showing the backend view
+  (`ISolver::toSmtLib2`, what Z3 actually receives).
 
 ## GUI (Phase 5, done)
 
@@ -156,6 +196,28 @@ solver (SAT/UNSAT/UNKNOWN, model conversion), serialization (round-trip),
 integration (source → solve → model). Phase 1 already covers the full Z3
 chain with smoke tests.
 
+## CI (Phase 9)
+
+GitHub Actions, GCC/Clang only (`.github/workflows/ci.yml`):
+
+```text
+linux-gcc / linux-clang: apt Qt6 + libz3-dev → configure → build → ctest
+windows-mingw:           MSYS2 MINGW64 pacman (gcc, ninja, qt6, z3) → same steps
+[Future] MSVC job — documented extension point; must reuse the same steps
+```
+
+CI uses system/package-manager Z3; the project-local bootstrap remains the
+local-development path. Both flows converge on the same CMake targets.
+
+## Polish delivered in Phase 9
+
+- DSL syntax highlighting (`DslHighlighter`, block-comment states,
+  palette mirrors Theme.qml).
+- Recent projects (QSettings, File ▸ Open Recent) and persistent window
+  geometry.
+- Remaining future work: editor search, settings dialog, unsat cores,
+  additional solver backends.
+
 ## Roadmap
 
 ```text
@@ -165,7 +227,7 @@ Phase 3  parser + diagnostics                    ✓ done
 Phase 4  Z3 solver adapter                       ✓ done
 Phase 5  GUI panels, dark theme                  ✓ done
 Phase 6  async solving, cancellation, timeout    ✓ done
-Phase 7  JSON persistence (.z3w)
-Phase 8  SMT-LIB2 / JSON / TXT export, import
-Phase 9  polish, syntax highlighting, CI (GCC + Clang matrix)
+Phase 7  JSON persistence (.z3w)                 ✓ done
+Phase 8  SMT-LIB2 / JSON / TXT export, import    ✓ done
+Phase 9  polish, syntax highlighting, CI         ✓ done (GCC/Clang matrix)
 ```
