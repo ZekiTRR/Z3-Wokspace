@@ -141,7 +141,7 @@ chain with smoke tests.
 Phase 1  build skeleton, Z3 bootstrap            ✓ done
 Phase 2  domain model                            ✓ done
 Phase 3  parser + diagnostics                    ✓ done
-Phase 4  Z3 solver adapter
+Phase 4  Z3 solver adapter                       ✓ done
 Phase 5  GUI panels, dark theme
 Phase 6  async solving, cancellation, timeout
 Phase 7  JSON persistence (.z3w)

@@ -6,6 +6,7 @@ add_executable(Z3WorkbenchTests
     core/ProjectTest.cpp
     core/SolverResultTest.cpp
     core/VersionTest.cpp
+    integration/EndToEndTest.cpp
     parser/LexerTest.cpp
     parser/ParserTest.cpp
     parser/SemanticTest.cpp
