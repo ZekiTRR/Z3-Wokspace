@@ -1,0 +1,18 @@
+# Build trees (per toolchain/configuration)
+build/
+
+# Project-local Z3 working tree (sources, build artifacts, install)
+ThirdParty/Z3/source/
+ThirdParty/Z3/build/
+ThirdParty/Z3/install/
+ThirdParty/Z3/VERSION
+
+# Generated tooling output
+compile_commands.json
+
+# IDE / editor noise
+.vs/
+.idea/
+*.user
+CMakeUserPresets.json
+.DS_Store
