@@ -37,13 +37,11 @@ m_strName; m_bEnabled; m_vecConstraints; m_upSolver;
 
 - Core stays Qt-free; Domain stays Z3-free and Qt-free.
 - No God objects; UI never touches `z3::*` types.
-- Compiler-specific code goes to `cmake/` or a small platform layer — never
-  into Domain/Application/Core.
+- Compiler-specific code goes to `cmake/` or a small platform layer — never into Domain/Application/Core.
 
 ## Warnings
 
-The build targets zero warnings (`-Wall -Wextra -Wpedantic`). Local
-suppression is allowed only with an explanatory comment. Check with:
+The build targets zero warnings (`-Wall -Wextra -Wpedantic`). Local suppression is allowed only with an explanatory comment. Check with:
 
 ```powershell
 cmake -DZ3WORKBENCH_WARNINGS_AS_ERRORS=ON ...
@@ -56,8 +54,3 @@ Significant components require unit/integration tests (doctest). Run:
 ```powershell
 scripts/test.ps1
 ```
-
-## Commits
-
-Small, focused commits per phase step; generated artifacts (`build/`,
-`ThirdParty/Z3/install`) are never committed.

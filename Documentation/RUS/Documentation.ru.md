@@ -5,7 +5,7 @@
 детально разобран синтаксис DSL, описано создание и решение задач, приведён
 каталог всех диагностических сообщений и форматов файлов.
 
-Английская версия документа: [Documentation.md](Documentation.md).
+Английская версия документа: [Documentation.md](../ENG/Documentation.md).
 
 ---
 
@@ -871,4 +871,4 @@ Linux `~/.config/Z3Workbench/Z3 Workbench.conf`.
 ---
 
 *Z3 Workbench · лицензия MIT · внутреннее устройство описано в
-[ARCHITECTURE.md](ARCHITECTURE.md).*
+[ARCHITECTURE.ru.md](ARCHITECTURE.ru.md).*

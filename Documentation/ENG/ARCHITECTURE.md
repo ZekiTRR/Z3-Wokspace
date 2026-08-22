@@ -156,9 +156,9 @@ Domain Problem → SmtLib2Serializer → .smt2   (Z3-free, portable output)
 Domain Problem → ProblemExporter {SmtLib2 | Json | Txt} → files
 ```
 
-- The serializer infers sorts from the declared variables, so BitVec
+- The serializer infers types from the declared variables, so BitVec
   operations map to unsigned functions (bvult, bvudiv, bvneg, ...) and
-  negation picks the right form per sort.
+  negation picks the right form per type.
 - The reader accepts the exporter's subset (declare-const/assert over the
   workbench operator set); unknown commands are skipped, unknown operators
   are reported with line numbers.

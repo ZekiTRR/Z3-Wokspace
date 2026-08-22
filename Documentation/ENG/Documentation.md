@@ -5,7 +5,7 @@ workbench for the [Z3](https://github.com/Z3Prover/z3) SMT solver. It covers
 the DSL syntax in full detail, explains how to create and solve problems,
 catalogs every diagnostic message, and documents all file formats.
 
-A Russian version of this document is available: [Documentation.ru.md](Documentation.ru.md).
+A Russian version of this document is available: [Documentation.ru.md](../RUS/Documentation.ru.md).
 
 ---
 
