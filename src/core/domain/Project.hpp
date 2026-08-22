@@ -29,6 +29,11 @@ public:
 
     [[nodiscard]] bool removeProblem(ProblemId oId);
 
+    // Mutable access by index for management operations (rename); the same
+    // pointer-invalidation caveat as problems() applies.
+    [[nodiscard]] Problem* problemAt(std::size_t stIndex);
+    [[nodiscard]] const Problem* problemAt(std::size_t stIndex) const;
+
     // Deep copy with fresh ids for the problem and all of its variables,
     // constraints, including references inside expressions.
     [[nodiscard]] Problem* duplicateProblem(ProblemId oId, std::string strNewName);

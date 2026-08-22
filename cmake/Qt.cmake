@@ -17,3 +17,6 @@ qt_standard_project_setup()
 
 # ':/qt/qml/' is the default resource prefix for QML modules (Qt 6.5+).
 qt_policy(SET QTP0001 NEW)
+# qmldir files for extra QML subdirectories (panels/, components/) are
+# generated automatically.
+qt_policy(SET QTP0004 NEW)

@@ -24,6 +24,19 @@ public:
     [[nodiscard]] const std::string& name() const noexcept { return m_strName; }
     void setName(std::string strName) { m_strName = std::move(strName); }
 
+    // User-authored DSL text this problem was built from. Kept in the domain
+    // because persistence and the editor round-trip through it.
+    [[nodiscard]] const std::string& sourceText() const noexcept { return m_strSource; }
+    void setSourceText(std::string strSource) { m_strSource = std::move(strSource); }
+
+    // Atomically replaces the parsed contents while preserving identity
+    // (id, name). Used by the editor pipeline after successful re-parse.
+    void resetContents(std::vector<Variable> vecVariables,
+        std::vector<Constraint> vecConstraints, std::string strSource);
+
+    [[nodiscard]] static std::string makeUniqueName(const std::string& strBase,
+        const std::vector<std::string>& vecTakenNames);
+
     // Adds a variable; assigns a fresh id when unset. Returns false when the
     // name is missing, invalid, or already taken — the caller surfaces that
     // as a validation message instead of an exception path.
@@ -49,6 +62,7 @@ public:
 private:
     ProblemId m_id;
     std::string m_strName;
+    std::string m_strSource;
     std::vector<Variable> m_vecVariables;
     std::vector<Constraint> m_vecConstraints;
 };

@@ -10,6 +10,32 @@ Problem::Problem(std::string strName)
 {
 }
 
+void Problem::resetContents(std::vector<Variable> vecVariables,
+    std::vector<Constraint> vecConstraints, std::string strSource)
+{
+    m_vecVariables = std::move(vecVariables);
+    m_vecConstraints = std::move(vecConstraints);
+    m_strSource = std::move(strSource);
+}
+
+std::string Problem::makeUniqueName(const std::string& strBase,
+    const std::vector<std::string>& vecTakenNames)
+{
+    for (std::size_t stSuffix = 1;; ++stSuffix)
+    {
+        const std::string strCandidate = strBase + "_" + std::to_string(stSuffix);
+        const bool bTaken = std::any_of(vecTakenNames.begin(), vecTakenNames.end(),
+            [&strCandidate](const std::string& strExisting)
+            {
+                return strExisting == strCandidate;
+            });
+        if (!bTaken)
+        {
+            return strCandidate;
+        }
+    }
+}
+
 bool Problem::addVariable(Variable oVariable)
 {
     if (!isValidVariableName(oVariable.name))

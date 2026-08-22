@@ -105,13 +105,21 @@ Design decisions:
 DSL: `var <name>: <Type>` and `constraint <expr>` statements; `//` and
 `/* */` comments; dec/hex/bin/real/string literals.
 
-## Threading model (Phase 6)
+## Threading model (Phase 6, done)
 
 ```text
-GUI thread → SolverService.solveAsync() → worker thread → Z3 (with :timeout)
-Stop → cooperative cancellation (atomic flag) + Z3 timeout
-Result → queued signal → GUI thread
+GUI thread: solve() → snapshot Problem into SolveJob → queued emit → worker
+Worker thread (solver-worker): Z3Solver::solve(job.problem, config, cancel)
+Stop: AtomicCancellation.cancel() — cooperative; Z3 :timeout bounds the wait
+Result: SolveJobResult via queued signal → GUI thread → panels updated
 ```
+
+- `SolveJob`/`SolveJobResult` are Qt-facing value structs in the GUI layer;
+  domain types stay metatype-free.
+- A long-lived `SolverWorker` lives in a dedicated QThread; each request gets
+  fresh backend state, so no worker churn is needed.
+- Results for a problem that is no longer selected are discarded with a log
+  note. Stop while busy sets status CANCELLING until the backend returns.
 
 ## Persistence and export (Phases 7-8)
 
@@ -120,13 +128,26 @@ layer). Serialization lives in core (Qt-free) using nlohmann/json (pinned).
 Export targets: SMT-LIB2, JSON, TXT; SMT-LIB2 is produced by a dedicated
 serializer from the Domain representation and is also viewable in the UI.
 
-## GUI (Phase 5)
+## GUI (Phase 5, done)
 
-IDE-style dark layout: menu, toolbar, project explorer (left), problem
-editor (center), variables/model panel (right), console/diagnostics
-(bottom), status bar. QML handles layout/binding only; all state lives in
-C++ viewmodels exposed to QML. Shortcuts: Ctrl+N, Ctrl+S, F5, Shift+F5,
-Ctrl+Enter.
+IDE-style dark layout: menu bar, toolbar, project explorer (left), problem
+editor with live diagnostics (center), variables/model panel (right),
+console (bottom), status bar. `Theme.qml` is a QML singleton holding the
+palette.
+
+- QML handles layout/binding only; all state lives in
+  `gui::WorkspaceViewModel`, exposed as the `workspace` context property.
+  QML never touches core types beyond what the viewmodel exposes.
+- List views are backed by dedicated `QAbstractListModel`s
+  (`ProblemsModel`, `VariablesModel`, `DiagnosticsModel`,
+  `ConsoleLogModel`); the viewmodel pushes snapshots, models stay dumb.
+- Editing re-parses on every change: errors show live in diagnostics while
+  the problem keeps its last valid contents (`rebuildProblemFromSource`).
+  Solve always runs on the newest text.
+- The solver is injected through `ISolver` (`makeDefaultSolver()`), so GUI
+  and app never see Z3 headers.
+- Shortcuts: Ctrl+N new problem, F5 solve, Shift+F5 stop (Phase 6),
+  Ctrl+M SMT-LIB2 viewer, Ctrl+Q quit.
 
 ## Testing
 
@@ -142,8 +163,8 @@ Phase 1  build skeleton, Z3 bootstrap            ✓ done
 Phase 2  domain model                            ✓ done
 Phase 3  parser + diagnostics                    ✓ done
 Phase 4  Z3 solver adapter                       ✓ done
-Phase 5  GUI panels, dark theme
-Phase 6  async solving, cancellation, timeout
+Phase 5  GUI panels, dark theme                  ✓ done
+Phase 6  async solving, cancellation, timeout    ✓ done
 Phase 7  JSON persistence (.z3w)
 Phase 8  SMT-LIB2 / JSON / TXT export, import
 Phase 9  polish, syntax highlighting, CI (GCC + Clang matrix)

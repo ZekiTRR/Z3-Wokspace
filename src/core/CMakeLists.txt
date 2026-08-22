@@ -16,6 +16,7 @@ set(Z3WB_CORE_SOURCES
     parser/Parser.cpp
     parser/ProblemParser.cpp
     parser/SemanticAnalyzer.cpp
+    solver/SolverFactory.cpp
     solver/z3/Z3ExpressionConverter.cpp
     solver/z3/Z3ModelConverter.cpp
     solver/z3/Z3Solver.cpp

@@ -23,4 +23,12 @@ struct ParseResult
 // resolved against all declared variables.
 [[nodiscard]] ParseResult parseProblem(std::string_view svSource, std::string strName);
 
+// Re-parses source into an existing problem, preserving its identity (id,
+// name). On success the parsed variables/constraints/source atomically
+// replace the current contents. On failure the problem is left untouched and
+// vecDiags carries the errors — the editor keeps the last valid state while
+// the user types.
+[[nodiscard]] bool rebuildProblemFromSource(Problem& oTarget,
+    std::string_view svSource, std::vector<Diagnostic>& vecDiags);
+
 } // namespace z3wb

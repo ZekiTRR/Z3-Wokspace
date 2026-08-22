@@ -1,5 +1,6 @@
 add_executable(Z3WorkbenchTests
     main.cpp
+    core/AtomicCancellationTest.cpp
     core/ExpressionTest.cpp
     core/IdsTest.cpp
     core/ProblemTest.cpp

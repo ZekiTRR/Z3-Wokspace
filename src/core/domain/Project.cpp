@@ -77,6 +77,16 @@ bool Project::removeProblem(ProblemId oId)
     return true;
 }
 
+Problem* Project::problemAt(std::size_t stIndex)
+{
+    return stIndex < m_vecProblems.size() ? &m_vecProblems[stIndex] : nullptr;
+}
+
+const Problem* Project::problemAt(std::size_t stIndex) const
+{
+    return stIndex < m_vecProblems.size() ? &m_vecProblems[stIndex] : nullptr;
+}
+
 Problem* Project::duplicateProblem(ProblemId oId, std::string strNewName)
 {
     const Problem* pSource = findProblem(oId);
@@ -107,6 +117,8 @@ Problem* Project::duplicateProblem(ProblemId oId, std::string strNewName)
 
         [[maybe_unused]] const bool bAdded = oCopy.addConstraint(std::move(oCloned));
     }
+
+    oCopy.setSourceText(pSource->sourceText());
 
     m_vecProblems.push_back(std::move(oCopy));
     return &m_vecProblems.back();

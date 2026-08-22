@@ -1,6 +1,10 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QQuickStyle>
+
+#include "core/solver/SolverFactory.hpp"
+#include "gui/viewmodels/WorkspaceViewModel.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -12,7 +16,12 @@ int main(int argc, char* argv[])
     // Deterministic cross-platform baseline; the dark IDE theme is applied in QML.
     QQuickStyle::setStyle("Basic");
 
+    // Dependency injection: the UI layer only knows the ISolver interface.
+    z3wb::gui::WorkspaceViewModel oWorkspace(z3wb::makeDefaultSolver());
+
+
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("workspace"), &oWorkspace);
 
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed,

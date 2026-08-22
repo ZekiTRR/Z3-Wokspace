@@ -2,6 +2,7 @@
 
 #include "core/domain/SolverResult.hpp"
 #include "core/parser/ProblemParser.hpp"
+#include "core/solver/AtomicCancellation.hpp"
 #include "core/solver/ISolver.hpp"
 #include "core/solver/SolverConfig.hpp"
 #include "core/solver/z3/Z3Solver.hpp"
@@ -152,6 +153,27 @@ TEST_CASE("end-to-end: unsupported sort yields an error result")
     CHECK(oResult.status == SolverStatus::Error);
     REQUIRE_FALSE(oResult.diagnostics.empty());
     CHECK(oResult.diagnostics[0].message.find("not supported") != std::string::npos);
+}
+
+TEST_CASE("end-to-end: pre-cancelled request returns unknown without solving")
+{
+    using namespace z3wb;
+
+    const z3wb::ParseResult oParsed = z3wb::parseProblem(
+        "var x: Int\n"
+        "constraint x > 10\n", "cancelled");
+
+    REQUIRE(oParsed.ok());
+
+    auto spCancel = std::make_shared<AtomicCancellation>();
+    spCancel->cancel();
+
+    const Z3Solver oSolver;
+    const SolverResult oResult = oSolver.solve(*oParsed.problem, SolverConfig{}, spCancel);
+
+    CHECK(oResult.status == SolverStatus::Unknown);
+    REQUIRE_FALSE(oResult.diagnostics.empty());
+    CHECK(oResult.diagnostics[0].message.find("cancelled") != std::string::npos);
 }
 
 TEST_CASE("smt-lib2 rendering is complete and runnable")
